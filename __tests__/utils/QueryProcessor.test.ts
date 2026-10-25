@@ -25,4 +25,14 @@ describe("QueryProcessor", () => {
             "Rohan"
           ));
     })
+
+    test('should return Andrew ID', () => {
+        const response: string = QueryProcessor("What is your Andrew ID?");
+        expect(response).toBe("brutayis");
+    });
+
+    test('should return Andrew ID regardless of case and spacing', () => {
+        expect(QueryProcessor("what is your andrewid")).toBe("brutayis");
+        expect(QueryProcessor("WHAT IS YOUR ANDREW ID?")).toBe("brutayis");
+    });
 });
