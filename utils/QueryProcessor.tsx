@@ -46,6 +46,12 @@ function sorted(word: string): string {
   return word.toLowerCase().split("").sort().join("");
 }
 
+function bigPow(base: bigint, exp: bigint): bigint {
+  let result = BigInt(1);
+  for (let i = BigInt(0); i < exp; i++) result *= base;
+  return result;
+}
+
 const OPERATORS = /(-?\d+(?:\.\d+)?)|(plus|minus|multiplied by|times|divided by|to the power of)/gi;
 
 // "What is 3 plus 4 multiplied by 5?" -> 23, with the usual operator precedence.
@@ -57,19 +63,22 @@ function evaluate(query: string): string | undefined {
 
   const isNumber = (token: string) => /^-?\d/.test(token);
   if (!tokens.every((token, index) => (index % 2 === 0) === isNumber(token))) return;
+  // BigInt handles integers only; bail on decimals so it never throws.
+  if (tokens.some((token) => token.includes("."))) return;
 
   const apply = (operators: string[]) => {
     for (let i = 1; i < tokens.length; ) {
       if (operators.includes(tokens[i])) {
-        const a = Number(tokens[i - 1]);
-        const b = Number(tokens[i + 1]);
+        // BigInt keeps powers and large sums exact; Number would lose precision (e.g. 81^17).
+        const a = BigInt(tokens[i - 1]);
+        const b = BigInt(tokens[i + 1]);
         const result =
           tokens[i] === "plus" ? a + b
           : tokens[i] === "minus" ? a - b
           : tokens[i] === "divided by" ? a / b
-          : tokens[i] === "to the power of" ? Math.pow(a, b)
+          : tokens[i] === "to the power of" ? bigPow(a, b)
           : a * b;
-        tokens.splice(i - 1, 3, String(result));
+        tokens.splice(i - 1, 3, result.toString());
       } else {
         i += 2;
       }
@@ -79,8 +88,7 @@ function evaluate(query: string): string | undefined {
   apply(["multiplied by", "times", "divided by"]);
   apply(["plus", "minus"]);
 
-  const value = Number(tokens[0]);
-  return Number.isFinite(value) ? String(Number.isInteger(value) ? value : Math.round(value * 1e6) / 1e6) : undefined;
+  return /^-?\d+$/.test(tokens[0]) ? tokens[0] : undefined;
 }
 
 export default function QueryProcessor(query: string): string {
