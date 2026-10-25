@@ -14,6 +14,17 @@ function numbersAfterColon(query: string): number[] {
   return (list.match(/-?\d+/g) ?? []).map(Number);
 }
 
+// Pick the max/min from a list by BigInt comparison, returning the original token (no precision loss).
+function extremeNumber(query: string, kind: "max" | "min"): string {
+  const list = query.includes(":") ? query.slice(query.indexOf(":") + 1) : query;
+  const tokens: string[] = list.match(/-?\d+/g) ?? [];
+  let best = tokens[0] ?? "";
+  for (const token of tokens) {
+    if (kind === "max" ? BigInt(token) > BigInt(best) : BigInt(token) < BigInt(best)) best = token;
+  }
+  return best;
+}
+
 function wordsAfterColon(query: string): string[] {
   return query
     .slice(query.indexOf(":") + 1)
@@ -35,11 +46,12 @@ function isPrime(n: number): boolean {
   return true;
 }
 
-function fibonacci(n: number): number {
-  let previous = 0;
-  let current = 1;
+// 1-indexed: 1,1,2,3,5,8,... BigInt so large positions stay exact.
+function fibonacci(n: number): bigint {
+  let previous = BigInt(0);
+  let current = BigInt(1);
   for (let i = 1; i < n; i++) [previous, current] = [current, previous + current];
-  return n === 0 ? 0 : current;
+  return n === 0 ? BigInt(0) : current;
 }
 
 function sorted(word: string): string {
@@ -101,8 +113,11 @@ export default function QueryProcessor(query: string): string {
   if (/what is your name/.test(text)) return "hiProf";
 
   // Lists of numbers
-  if (/largest|biggest|greatest/.test(text)) return String(Math.max(...numbersAfterColon(query)));
-  if (/smallest|lowest/.test(text)) return String(Math.min(...numbersAfterColon(query)));
+  if (/largest|biggest|greatest|maximum/.test(text)) return extremeNumber(query, "max");
+  if (/smallest|lowest|minimum/.test(text)) return extremeNumber(query, "min");
+  if (/sum of/.test(text) && text.includes(":")) {
+    return numbersAfterColon(query).reduce((total, n) => total + n, 0).toString();
+  }
   if (/both a square and a cube/.test(text)) {
     return numbersAfterColon(query)
       .filter((n) => isPerfectPower(n, 2) && isPerfectPower(n, 3))
@@ -143,7 +158,7 @@ export default function QueryProcessor(query: string): string {
   // General knowledge
   if (text.includes("eiffel")) return "Paris";
   if (text.includes("banana")) return "yellow";
-  if (text.includes("spain") && text.includes("euro")) return "peseta";
+  if (text.includes("spain") && text.includes("euro")) return "Peseta";
   if (text.includes("james bond") && text.includes("dr no")) return "Sean Connery";
   if (text.includes("pragmatic bookshelf")) return "pragprog";
 
