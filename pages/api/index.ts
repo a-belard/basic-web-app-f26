@@ -10,7 +10,15 @@ export default function handler(
 ) {
   console.log(req.url);
   
-  const query = req.query.q as string;
+  // q is missing on a bare /api request and an array when it is repeated.
+  const q = req.query.q;
+  const query = Array.isArray(q) ? q.join(" ") : q;
+
+  if (!query) {
+    res.status(200).send("Ask a question with /api?q=<question>, for example /api?q=shakespeare");
+    return;
+  }
+
   const response = QueryProcessor(query);
 
   res.status(200).send(response);
